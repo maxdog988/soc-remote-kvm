@@ -1,0 +1,21 @@
+# Remote KVM
+
+This is a Virtual Network Computing (VNC) server program using [LibVNCServer](https://libvnc.github.io/).
+
+In order to support some hardware features of Nuvoton's NPCM750, we have made some modifications to [LibVNCServer](https://libvnc.github.io/).
+1) Add Video Capture and Differentiation(VCD), compares frame by hardware.
+    * libvncserver/main.c (M)
+    * libvncserver/rfbserver.c(M)
+    * libvncserver/rfbnpcm750.c (NEW)
+    * rfb/rfb.h (M)
+    * rfb/rfbnpcm750.h (NEW)
+2) Add Encoding Compression Engine(ECE), 16-bit hextile compression hardware encoding.
+    * libvncserver/hextile.c (M)
+3) Add USB HID, support Keyboard and Mouse.
+    * libvncserver/usb_hid.c (NEW)
+    * rfb/usb_hid.h (NEW)
+    * rfb/usb_hid_key.h (NEW)
+4) VNC server program
+    * nuvoton/remote-kvm.c (NEW)
+
+* Please use autotool "--with-poleg=yes" to build this project
