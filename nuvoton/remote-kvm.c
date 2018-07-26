@@ -51,7 +51,7 @@ static enum rfbNewClientAction newclient(rfbClientPtr cl)
 
 int main(int argc,char** argv)
 {
-    nurfb = init_vcd();
+    nurfb = init_nurfb();
     if (!nurfb)
         return 0;
 
@@ -59,7 +59,7 @@ int main(int argc,char** argv)
     if(!rfbScreen)
         return 0;
 
-    rfbScreen->desktopName = "LibVNCServer Example";
+    rfbScreen->desktopName = "Remote KVM";
     rfbScreen->frameBuffer = nurfb->raw_fb_addr;
     rfbScreen->alwaysShared = TRUE;
     rfbScreen->ptrAddEvent = pointer_event;
@@ -70,7 +70,7 @@ int main(int argc,char** argv)
     rfbInitServer(rfbScreen);
     rfbRunEventLoop(rfbScreen,40000,FALSE);
 
-    clear_vcd(nurfb);
+    clear_nurfb(nurfb);
     rfbScreenCleanup(rfbScreen);
     return(0);
 }

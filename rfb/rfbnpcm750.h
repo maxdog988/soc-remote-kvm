@@ -83,6 +83,7 @@ struct vcd_diff {
 struct nu_rfb {
     struct vcd_info vcd_info;
     struct vcd_diff *diff_table;
+    char *fake_fb;
     char *raw_fb;
     char *raw_fb_addr;
     char *raw_ece_addr;
@@ -119,10 +120,12 @@ int get_diff_table(rfbClientRec *cl, struct vcd_diff *diff, int i);
 int set_vcd_cmd(struct nu_rfb *nurfb, int cmd);
 int chk_vcd_res(rfbClientRec *cl);
 int init_vcd_res(struct nu_rfb *nurfb);
+struct nu_rfb *init_nurfb(void);
 int get_vcd_info(struct nu_rfb *nurfb, struct vcd_info *info);
-struct nu_rfb *init_vcd(void);
-void clear_vcd(struct nu_rfb *nurfb);
+int init_vcd(struct nu_rfb *nurfb);
+void clear_nurfb(struct nu_rfb *nurfb);
 int hid_init(void);
+void hid_close(void);
 void keyboard(rfbBool down, rfbKeySym keysym, rfbClientPtr client);
 void pointer_event(int mask, int x, int y, rfbClientPtr client);
 int auth_pam_ldap(char *username, char *passwd, char *ip);
