@@ -370,7 +370,7 @@ int keyboard_iow(int down, unsigned long keysym) {
         }
     }
 
-    keyboard_fd = open(KB_DEV, O_RDWR);
+    keyboard_fd = open(KB_DEV, O_WRONLY | O_NONBLOCK);
     if (keyboard_fd < 0) {
         printf("can not open %s \n", KB_DEV);
         return -1;
@@ -420,7 +420,7 @@ int mouse_iow(int mask, int x, int y, int w, int h) {
     mouse_data[4] = (m_y >> 8) & 0xff;
     mouse_data[5] = wheel;
 
-    mouse_fd = open(MS_DEV, O_RDWR);
+    mouse_fd = open(MS_DEV, O_WRONLY | O_NONBLOCK);
     if (mouse_fd < 0) {
         printf("can not open %s \n", MS_DEV);
         return -1;
