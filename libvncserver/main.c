@@ -813,6 +813,14 @@ static void rfbInitServerFormat(rfbScreenInfoPtr screen, int bitsPerSample)
        }
      }
    }
+#ifdef LIBVNCSERVER_HAVE_POLEG
+   format->redMax = 31;
+   format->greenMax = 63;
+   format->blueMax = 31;
+   format->redShift = 11;
+   format->greenShift = 5;
+   format->blueShift = 0;
+#endif
 }
 
 rfbScreenInfoPtr rfbGetScreen(int* argc,char** argv,
