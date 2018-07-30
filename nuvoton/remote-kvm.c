@@ -40,12 +40,6 @@ static enum rfbNewClientAction newclient(rfbClientPtr cl)
 
     cl->update_cnt = 30;
     cl->clientGoneHook = clientgone;
-    cl->screen->serverFormat.redMax = 31;
-    cl->screen->serverFormat.greenMax = 63;
-    cl->screen->serverFormat.blueMax = 31;
-    cl->screen->serverFormat.redShift = 11;
-    cl->screen->serverFormat.greenShift = 5;
-    cl->screen->serverFormat.blueShift = 0;
     return RFB_CLIENT_ACCEPT;
 }
 
@@ -66,7 +60,7 @@ int main(int argc,char** argv)
     rfbScreen->kbdAddEvent = keyboard;
     rfbScreen->newClientHook = newclient;
 
-  /* initialize the server */
+    /* initialize the server */
     rfbInitServer(rfbScreen);
     rfbRunEventLoop(rfbScreen,40000,FALSE);
 

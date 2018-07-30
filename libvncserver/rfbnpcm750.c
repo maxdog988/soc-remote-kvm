@@ -186,12 +186,6 @@ int get_update(rfbClientRec *cl)
             set_vcd_cmd(nurfb, 0);
             init_vcd(nurfb);
             rfbNewFramebuffer(cl->screen, nurfb->raw_fb_addr, nurfb->vcd_info.hdisp, nurfb->vcd_info.vdisp, 5, 1, 2);
-            cl->screen->serverFormat.redMax = 31;
-            cl->screen->serverFormat.greenMax = 63;
-            cl->screen->serverFormat.blueMax = 31;
-            cl->screen->serverFormat.redShift = 11;
-            cl->screen->serverFormat.greenShift = 5;
-            cl->screen->serverFormat.blueShift = 0;
         }
 
         LOCK(cl->updateMutex);
