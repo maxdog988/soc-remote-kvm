@@ -23,9 +23,11 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-struct nu_rfb g_rfb;
-void clear_vcd(struct nu_rfb *nurfb) {
-    if (nurfb->raw_fb_addr) {
+void clear_nurfb(struct nu_rfb *nurfb) {
+    if (nurfb->fake_fb) {
+        free(nurfb->fake_fb);
+        nurfb->fake_fb = NULL;
+    } else if (nurfb->raw_fb_addr) {
         munmap(nurfb->raw_fb_addr, nurfb->raw_fb_mmap);
         nurfb->raw_fb_mmap = 0;
         nurfb->raw_fb_addr = NULL;
@@ -46,16 +48,41 @@ void clear_vcd(struct nu_rfb *nurfb) {
         close(nurfb->hextile_fd);
         nurfb->hextile_fd = -1;
     }
+
+    free(nurfb);
+    nurfb = NULL;
+
+    hid_close();
 }
 
-struct nu_rfb *init_vcd(void) {
-    struct nu_rfb *nurfb = &g_rfb;
+struct nu_rfb *init_nurfb(void) {
+    struct nu_rfb *nurfb = NULL;
+
+    nurfb = malloc(sizeof(struct nu_rfb));
+    if (!nurfb)
+        return NULL;
+
+    memset(nurfb, 0 , sizeof(struct nu_rfb));
+
+    if (init_vcd(nurfb) < 0)
+        return NULL;
+
+    return nurfb;
+}
+
+int init_vcd(struct nu_rfb *nurfb) {
     struct vcd_info *vcd_info = &nurfb->vcd_info;
     struct ioctl_cmd cmd;
     int size;
 
     if (nurfb->last_mode == RAWFB_MMAP) {
-        munmap(nurfb->raw_fb_addr, nurfb->raw_fb_mmap);
+        if (!nurfb->fake_fb) {
+            munmap(nurfb->raw_fb_addr, nurfb->raw_fb_mmap);
+        } else {
+            free(nurfb->fake_fb);
+            nurfb->fake_fb = NULL;
+        }
+
         close(nurfb->raw_fb_fd);
         munmap(nurfb->raw_ece_addr, nurfb->raw_ece_mmap);
         close(nurfb->hextile_fd);
@@ -68,7 +95,6 @@ struct nu_rfb *init_vcd(void) {
     }
 
     nurfb->raw_fb_fd = open("/dev/vcd", O_RDWR);
-
     if (nurfb->raw_fb_fd < 0) {
         rfbLog("failed to open /dev/vcd \n");
         goto error;
@@ -94,6 +120,18 @@ struct nu_rfb *init_vcd(void) {
         goto error;
     }
 
+    if (vcd_info->hdisp == 0
+        || vcd_info->vdisp == 0
+        || vcd_info->line_pitch == 0) {
+        /* grapich is off, fake a FB */
+        vcd_info->hdisp = 320;
+        vcd_info->vdisp = 240;
+        vcd_info->line_pitch = 1024;
+        nurfb->fake_fb = malloc(vcd_info->hdisp  * vcd_info->vdisp  * 2);
+        if (!nurfb->fake_fb)
+            goto error;
+    }
+
     cmd.w = vcd_info->hdisp;
     cmd.h = vcd_info->vdisp;
     cmd.LP = vcd_info->line_pitch;
@@ -115,35 +153,45 @@ struct nu_rfb *init_vcd(void) {
         nurfb->is_hid_init = 1;
     }
 
-    nurfb->raw_fb_addr = mmap(0, size, PROT_READ, MAP_SHARED,
-         nurfb->raw_fb_fd, 0);
-    if (!nurfb->raw_fb_addr) {
-        rfbErr("mmap raw_fb_addr failed \n");
-        goto error;
-    } else {
-        nurfb->raw_fb_mmap = size;
-        rfbLog("   w: %d h: %d b: %d addr: %p sz: %d\n", vcd_info->hdisp, vcd_info->vdisp,
-            16, nurfb->raw_fb_addr, size);
-        nurfb->last_mode = RAWFB_MMAP;
-    }
+    if (!nurfb->fake_fb) {
+        nurfb->raw_fb_addr = mmap(0, size, PROT_READ, MAP_SHARED,
+            nurfb->raw_fb_fd, 0);
+        if (!nurfb->raw_fb_addr) {
+            rfbErr("mmap raw_fb_addr failed \n");
+            goto error;
+        } else {
+            nurfb->raw_fb_mmap = size;
+            rfbLog("   w: %d h: %d b: %d addr: %p sz: %d\n", vcd_info->hdisp, vcd_info->vdisp,
+                16, nurfb->raw_fb_addr, size);
+        }
+    } else
+        nurfb->raw_fb_addr = nurfb->fake_fb;
 
-    return nurfb;
+    nurfb->last_mode = RAWFB_MMAP;
+    return 0;
 
 error:
-    clear_vcd(nurfb);
-    return NULL;
+    clear_nurfb(nurfb);
+    return -1;
 }
+
 int get_update(rfbClientRec *cl)
 {
     struct nu_rfb *nurfb = (struct nu_rfb *)cl->clientData;
 
     if (chk_vcd_res(cl)) {
         if (cl->id == 1) {
-            printf("*********res is changed ************\n");
-            usleep(1000* 300);
+            printf("*********res is changed **********\n");
+            usleep(1000 * 600);
             set_vcd_cmd(nurfb, 0);
-            init_vcd();
+            init_vcd(nurfb);
             rfbNewFramebuffer(cl->screen, nurfb->raw_fb_addr, nurfb->vcd_info.hdisp, nurfb->vcd_info.vdisp, 5, 1, 2);
+            cl->screen->serverFormat.redMax = 31;
+            cl->screen->serverFormat.greenMax = 63;
+            cl->screen->serverFormat.blueMax = 31;
+            cl->screen->serverFormat.redShift = 11;
+            cl->screen->serverFormat.greenShift = 5;
+            cl->screen->serverFormat.blueShift = 0;
         }
 
         LOCK(cl->updateMutex);

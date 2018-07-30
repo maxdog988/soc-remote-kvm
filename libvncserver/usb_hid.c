@@ -58,6 +58,10 @@
 #define MS_DEV "/dev/hidg1"
 #define USB_DEV_NAME "f0830000.udc"
 
+static int mouse_fd = -1;
+static int keyboard_fd = -1;
+
+
 static const unsigned char hid_report_mouse[] =
 {
     USAGE_PAGE,		0x01,			/* Usage Page (Generic Desktop) */
@@ -304,7 +308,6 @@ static unsigned char mod = 0;
 
 int keyboard_iow(int down, unsigned long keysym) {
     int i = 0;
-    int keyboard_fd = -1;
     unsigned char code = 0;
     KeyInfo *kPtr;
 
@@ -370,20 +373,16 @@ int keyboard_iow(int down, unsigned long keysym) {
         }
     }
 
-    keyboard_fd = open(KB_DEV, O_WRONLY | O_NONBLOCK);
-    if (keyboard_fd < 0) {
-        printf("can not open %s \n", KB_DEV);
-        return -1;
-    } else
-        write(keyboard_fd, &keyboard_data, 8);
+    if (keyboard_fd < 0)
+         keyboard_fd = open(KB_DEV, O_WRONLY | O_NONBLOCK);
 
-    close(keyboard_fd);
+    if (keyboard_fd > -1)
+        write(keyboard_fd, &keyboard_data, 8);
 
     return 0;
 }
 
 int mouse_iow(int mask, int x, int y, int w, int h) {
-    int mouse_fd;
     unsigned short m_x = 0, m_y = 0;
     unsigned char button = 0;
     unsigned char wheel = 0;
@@ -420,14 +419,11 @@ int mouse_iow(int mask, int x, int y, int w, int h) {
     mouse_data[4] = (m_y >> 8) & 0xff;
     mouse_data[5] = wheel;
 
-    mouse_fd = open(MS_DEV, O_WRONLY | O_NONBLOCK);
-    if (mouse_fd < 0) {
-        printf("can not open %s \n", MS_DEV);
-        return -1;
-    } else
-        write(mouse_fd,&mouse_data, 6);
+    if (mouse_fd < 0)
+        mouse_fd = open(MS_DEV, O_WRONLY | O_NONBLOCK);
 
-    close(mouse_fd);
+    if (mouse_fd > -1)
+        write(mouse_fd,&mouse_data, 6);
 
     return 0;
 }
@@ -468,7 +464,24 @@ int hid_init(void) {
     symlink(USB1, CONF1);
 
     hid_f_write(UDC, USB_DEV_NAME, 16);
+
+    keyboard_fd = open(KB_DEV, O_WRONLY | O_NONBLOCK);
+    if (keyboard_fd < 0)
+        printf("can not open %s \n", KB_DEV);
+
+    mouse_fd = open(MS_DEV, O_WRONLY | O_NONBLOCK);
+    if (mouse_fd < 0)
+        printf("can not open %s \n", MS_DEV);
+
     return 0;
+}
+
+void hid_close(void){
+    close(mouse_fd);
+    mouse_fd = -1;
+
+    close(keyboard_fd);
+    keyboard_fd = -1;
 }
 
 void keyboard(rfbBool down, rfbKeySym keysym, rfbClientPtr client) {
