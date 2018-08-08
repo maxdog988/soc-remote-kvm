@@ -71,6 +71,13 @@ struct vcd_info {
     int refresh_rate;
     int hpositive;
     int vpositive;
+    int bpp;
+    int r_max;
+    int g_max;
+    int b_max;
+    int r_shift;
+    int g_shift;
+    int b_shift;
 };
 
 struct vcd_diff {
